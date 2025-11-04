@@ -108,7 +108,11 @@ const Login = () => {
                 
                 {/* Logo Section */}
                 <div className="logo-section">
-                    <h1 className="logo-text">Mətbəxim</h1>
+                <img
+                    src="/logo-metbexim.png"
+                    alt="Mətbəxim Logo"
+                    className="logo-image"
+                />
                 </div>
 
                 {/* Form Title */}
@@ -180,14 +184,18 @@ const Login = () => {
                             onClick={handleRegisterRedirect}
                             className="register-button"
                         >
-                            Qeydiyyatdan keçin
+                            Hesab yaradın
                         </button>
                     </p>
                 </div>
 
                 {/* University Branding */}
                 <div className="footer">
-                    <p>ADNSU | Azərbaycan Dövlət Neft və Sənaye Universiteti</p>
+                    <img
+                        src="/logo-adnsu.png"
+                        alt="ADNSU Logo"
+                        style={{ maxWidth: '300px', height: 'auto', display: 'block', margin: '0 auto' }}
+                    />
                 </div>
             </div>
         </div>

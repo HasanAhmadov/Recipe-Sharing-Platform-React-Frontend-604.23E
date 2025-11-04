@@ -195,7 +195,11 @@ const Register = () => {
 
                 {/* University Branding */}
                 <div className="footer">
-                    <p>ADNSU | Azərbaycan Dövlət Neft və Sənaye Universiteti</p>
+                    <img
+                        src="/logo-adnsu.png"
+                        alt="ADNSU Logo"
+                        style={{ maxWidth: '300px', height: 'auto', display: 'block', margin: '0 auto' }}
+                    />
                 </div>
             </div>
         </div>

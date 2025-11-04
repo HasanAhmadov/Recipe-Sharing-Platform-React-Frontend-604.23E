@@ -171,16 +171,17 @@
 .register-button {
     background: none;
     border: none;
-    color: #059669;
+    color: #1dfd4d; /* Light green */
     font-weight: 500;
     cursor: pointer;
     font-size: 14px;
     padding: 0;
     text-decoration: underline;
+    transition: color 0.2s;
 }
 
 .register-button:hover {
-    color: #047857;
+    color: #03e158; /* Slightly darker light green on hover */
 }
 
 .footer {
