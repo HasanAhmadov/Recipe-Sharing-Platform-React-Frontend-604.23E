@@ -198,7 +198,7 @@ const Register = () => {
                     <img
                         src="/logo-adnsu.png"
                         alt="ADNSU Logo"
-                        style={{ maxWidth: '300px', height: 'auto', display: 'block', margin: '0 auto' }}
+                        style={{ maxWidth: '260px', height: 'auto', display: 'block', margin: '0 auto' }}
                     />
                 </div>
             </div>
