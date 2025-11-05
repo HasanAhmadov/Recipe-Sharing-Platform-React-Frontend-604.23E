@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, Heart, Share2, Home, PlusSquare, User, LogOut } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import './Dashboard.css';
@@ -13,9 +13,14 @@ const Dashboard = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [userPosts, setUserPosts] = useState([]);
   const [userLoading, setUserLoading] = useState(false);
+  const [animatingHeart, setAnimatingHeart] = useState(null); // Track which post is animating { postId, type: 'like' | 'unlike' }
+  const [lastTap, setLastTap] = useState(null); // Track last tap time for double-tap detection
+  const [shareMessage, setShareMessage] = useState(null); // transient share/copy feedback
+  const shareTimerRef = useRef(null); // timer to clear message
   const { user, logout } = useAuth();
 
-  const API_BASE = 'https://rsp-api.up.railway.app';
+  // Prefer environment variable for deployment flexibility
+  const API_BASE = import.meta.env.VITE_API_BASE || 'https://rsp-api.up.railway.app';
 
   // Fetch all receipts on initial load
   useEffect(() => {
@@ -111,9 +116,10 @@ const Dashboard = () => {
       return;
     }
     try {
-      const response = await fetch(`${API_BASE}/api/Receipts/${postId}/like`, {
+      const response = await fetch(`${API_BASE}/api/Likes/LikeReceiptById/${postId}`, {
         method: 'POST',
         headers: getAuthHeaders(),
+        body: JSON.stringify({ receiptId: postId }),
       });
 
       if (!response.ok) {
@@ -124,37 +130,166 @@ const Dashboard = () => {
         throw new Error('Like failed');
       }
 
+      const data = await response.json();
+      const isLiked = data.liked;
+
+      // Trigger heart animation only when liking
+      if (isLiked) {
+        setAnimatingHeart({ postId, type: 'like' });
+        setTimeout(() => setAnimatingHeart(null), 1000); // Remove animation after 1 second
+      }
+
       // Update feed posts
       setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId
-            ? {
-                ...p,
-                likedByUser: !p.likedByUser,
-                count: p.likedByUser ? (p.count || p.likesCount || 1) - 1 : (p.count || p.likesCount || 0) + 1,
-                likesCount: p.likedByUser
-                  ? (p.likesCount || p.count || 1) - 1
-                  : (p.likesCount || p.count || 0) + 1,
-              }
-            : p
-        )
+        prev.map((p) => {
+          if (p.id === postId) {
+            const currentLikes = p.likesCount || p.count || 0;
+            const wasLiked = p.likedByUser || false;
+            
+            // Calculate new likes count based on the response
+            let newLikesCount;
+            if (isLiked && !wasLiked) {
+              // Just liked
+              newLikesCount = currentLikes + 1;
+            } else if (!isLiked && wasLiked) {
+              // Just unliked
+              newLikesCount = Math.max(0, currentLikes - 1);
+            } else {
+              // State is already in sync
+              newLikesCount = currentLikes;
+            }
+            
+            return {
+              ...p,
+              likedByUser: isLiked,
+              count: newLikesCount,
+              likesCount: newLikesCount,
+            };
+          }
+          return p;
+        })
       );
 
       // Update profile posts if viewing profile
       setUserPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId
-            ? {
-                ...p,
-                likedByUser: !p.likedByUser,
-                count: p.likedByUser ? (p.count || 1) - 1 : (p.count || 0) + 1,
-              }
-            : p
-        )
+        prev.map((p) => {
+          if (p.id === postId) {
+            const currentLikes = p.likesCount || p.count || 0;
+            const wasLiked = p.likedByUser || false;
+            
+            let newLikesCount;
+            if (isLiked && !wasLiked) {
+              newLikesCount = currentLikes + 1;
+            } else if (!isLiked && wasLiked) {
+              newLikesCount = Math.max(0, currentLikes - 1);
+            } else {
+              newLikesCount = currentLikes;
+            }
+            
+            return {
+              ...p,
+              likedByUser: isLiked,
+              count: newLikesCount,
+            };
+          }
+          return p;
+        })
       );
     } catch (err) {
       console.error('Like error:', err);
       setError('Bəyənmə zamanı xəta baş verdi');
+    }
+  };
+
+  // Detect mobile environment (basic heuristic)
+  const isMobile = () => {
+    if (typeof navigator === 'undefined') return false;
+    return /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 600;
+  };
+
+  const buildShareUrl = (post) => {
+    // Canonical link – if future /recipe/:id route exists, adjust here
+    const origin = window.location.origin;
+    // Using query param so current app can parse in future if needed
+    return `${origin}/?recipeId=${post.id}`;
+  };
+
+  const showShareToast = (text) => {
+    setShareMessage(text);
+    if (shareTimerRef.current) clearTimeout(shareTimerRef.current);
+    shareTimerRef.current = setTimeout(() => setShareMessage(null), 2500);
+  };
+
+  const copyToClipboardFallback = (text) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-1000px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return true;
+    } catch (e) {
+      console.error('Clipboard fallback failed', e);
+      return false;
+    }
+  };
+
+  const handleShare = async (post) => {
+    if (!post) return;
+    const url = buildShareUrl(post);
+    const message = `${post.title || 'Resept'} – Bax: ${url}`;
+
+    // Mobile path: Try Web Share API first
+    if (isMobile()) {
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: post.title || 'Resept', text: post.title || 'Resept', url });
+          showShareToast('Paylaşıldı');
+          return;
+        } catch (err) {
+          // User cancelled or share failed; fallback to WhatsApp
+          console.warn('Web Share API failed or canceled, falling back to WhatsApp', err);
+        }
+      }
+      // WhatsApp fallback
+      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+      showShareToast('WhatsApp açılır...');
+      return;
+    }
+
+    // Desktop: copy to clipboard
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+        showShareToast('Link kopyalandı');
+      } else {
+        const ok = copyToClipboardFallback(url);
+        showShareToast(ok ? 'Link kopyalandı' : 'Kopyalama alınmadı');
+      }
+    } catch (e) {
+      console.error('Clipboard write failed', e);
+      const ok = copyToClipboardFallback(url);
+      showShareToast(ok ? 'Link kopyalandı' : 'Kopyalama alınmadı');
+    }
+  };
+
+  // Handle double-tap for mobile devices
+  const handleImageTap = (postId) => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300; // 300ms window for double-tap
+
+    if (lastTap && (now - lastTap) < DOUBLE_TAP_DELAY) {
+      // This is a double-tap
+      handleLike(postId);
+      setLastTap(null);
+    } else {
+      // This is a single tap, wait to see if another tap comes
+      setLastTap(now);
     }
   };
 
@@ -263,20 +398,38 @@ const Dashboard = () => {
   };
 
   const handleBackToFeed = () => {
-    setViewMode('feed');
-    setSelectedUser(null);
-    setUserPosts([]);
+    if (viewMode === 'feed') {
+      // If already on feed, refresh the page
+      window.location.reload();
+    } else {
+      // Otherwise, just switch back to feed view
+      setViewMode('feed');
+      setSelectedUser(null);
+      setUserPosts([]);
+    }
   };
 
   const handleLogout = () => {
-    logout();
+    logout();s
     window.location.href = '/login';
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return 'yeni';
+    
+    // Parse the UTC date string
     const date = new Date(dateString);
     const now = new Date();
+    
+    // Calculate difference in milliseconds, then convert to seconds
     const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    // Debugging: log the values
+    console.log('Date string:', dateString);
+    console.log('Parsed date:', date.toISOString());
+    console.log('Current time:', now.toISOString());
+    console.log('Difference in seconds:', diff);
+    
     if (diff < 0 || isNaN(diff)) return 'yeni';
     if (diff < 10) return 'yeni';
     if (diff < 60) return `${diff}s`;
@@ -346,9 +499,6 @@ const Dashboard = () => {
         {viewMode === 'profile' ? (
           <div className="profile-view">
             <div className="profile-header">
-              <button className="back-button" onClick={handleBackToFeed}>
-                <span>Geri</span>
-              </button>
               <div className="profile-avatar">
                 <User size={64} />
               </div>
@@ -377,7 +527,11 @@ const Dashboard = () => {
                           <span className="post-time">• {formatDate(post.createdAt)}</span>
                         </div>
                       </div>
-                      <div className="post-image">
+                      <div 
+                        className="post-image" 
+                        onDoubleClick={() => handleLike(post.id)}
+                        onClick={() => handleImageTap(post.id)}
+                      >
                         <img
                           src={
                             post.imageUrl?.startsWith('http')
@@ -389,6 +543,11 @@ const Dashboard = () => {
                             e.target.src = 'https://via.placeholder.com/600x400?text=Resept';
                           }}
                         />
+                        {animatingHeart?.postId === post.id && animatingHeart.type === 'like' && (
+                          <div className="heart-animation">
+                            <Heart size={80} fill="white" color="white" />
+                          </div>
+                        )}
                       </div>
                       <div className="post-actions">
                         <button
@@ -402,7 +561,7 @@ const Dashboard = () => {
                           />
                         </button>
                         <button className="action-btn">
-                          <Share2 size={24} />
+                          <Share2 size={24} onClick={() => handleShare(post)} />
                         </button>
                         <span className="likes-count">{post.count || 0} bəyənmə</span>
                       </div>
@@ -466,7 +625,11 @@ const Dashboard = () => {
                         <span className="post-time">• {formatDate(post.createdAt)}</span>
                       </div>
                     </div>
-                    <div className="post-image">
+                    <div 
+                      className="post-image" 
+                      onDoubleClick={() => handleLike(post.id)}
+                      onClick={() => handleImageTap(post.id)}
+                    >
                       <img
                         src={
                           post.imageUrl?.startsWith('http')
@@ -478,6 +641,11 @@ const Dashboard = () => {
                           e.target.src = 'https://via.placeholder.com/600x400?text=Resept';
                         }}
                       />
+                      {animatingHeart?.postId === post.id && animatingHeart.type === 'like' && (
+                        <div className="heart-animation">
+                          <Heart size={80} fill="white" color="white" />
+                        </div>
+                      )}
                     </div>
                     <div className="post-actions">
                       <button
@@ -491,7 +659,7 @@ const Dashboard = () => {
                         />
                       </button>
                       <button className="action-btn">
-                        <Share2 size={24} />
+                        <Share2 size={24} onClick={() => handleShare(post)} />
                       </button>
                       <span className="likes-count">
                         {post.likesCount || post.count || 0} bəyənmə
@@ -513,6 +681,9 @@ const Dashboard = () => {
           </>
         )}
       </div>
+      {shareMessage && (
+        <div className="share-toast">{shareMessage}</div>
+      )}
     </div>
   );
 };

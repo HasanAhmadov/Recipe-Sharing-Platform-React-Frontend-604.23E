@@ -162,10 +162,6 @@ const Create = () => {
 
       <div className="create-content">
         <div className="create-header">
-          <button className="back-button" onClick={goToDashboard}>
-            <ArrowLeft size={20} />
-            Geri
-          </button>
           <h1>Yeni resept yarat</h1>
         </div>
 
@@ -193,10 +189,10 @@ const Create = () => {
                   placeholder="Reseptin başlığını daxil edin"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  maxLength={500}
+                  maxLength={1000}
                   disabled={loading}
                 />
-                <span className="char-count">{title.length}/500</span>
+                <span className="char-count">{title.length}/1000</span>
               </div>
             </div>
 

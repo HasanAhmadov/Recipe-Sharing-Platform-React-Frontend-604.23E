@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 import './Login.css';
 
 const fetchWithRetry = async (url, options, maxRetries = 3) => {
@@ -35,6 +36,7 @@ const Login = () => {
     const [isSuccess, setIsSuccess] = useState(false);
     
     const navigate = useNavigate();
+    const { login } = useAuth();
 
     const handleRegisterRedirect = () => {
         navigate('/register');
@@ -70,25 +72,20 @@ const Login = () => {
                 setIsSuccess(true);
                 console.log('Login Successful:', data);
                 
-                // Store the token and user data
-                localStorage.setItem('accessToken', data.accessToken);
-                localStorage.setItem('username', data.username);
-                localStorage.setItem('name', data.name);
-                localStorage.setItem('expiresAt', data.expiresAt);
+                // Use the login function from AuthContext to update state
+                login(data);
                 
                 setMessage(`Xoş gəlmisiniz, ${data.name}! Uğurla daxil oldunuz.`);
                 
-                // Redirect to dashboard after 2 seconds
-                setTimeout(() => {
-                    navigate('/dashboard'); // You'll need to create this page
-                }, 2000);
+                // Redirect to dashboard immediately
+                navigate('/dashboard');
 
             } else {
                 // Handle different error cases
-                if (response.status === 401) {
-                    setMessage('İstifadəçi adı və ya şifrə yanlışdır.');
-                } else if (response.status === 400) {
-                    setMessage('Yanlış məlumat formatı.');
+                const errorMessage = typeof data === 'string' ? data : data.message || data.title;
+                
+                if (errorMessage === 'Invalid username or password.' || response.status === 400) {
+                    setMessage('Yanlış istifadəçi adı və ya şifrə');
                 } else {
                     const errorDetail = data.title || data.errors ? JSON.stringify(data) : 'Bilinməyən xəta baş verdi.';
                     setMessage(`Giriş xətası: ${errorDetail}`);
@@ -112,6 +109,11 @@ const Login = () => {
                     src="/logo-metbexim.png"
                     alt="Mətbəxim Logo"
                     className="logo-image"
+                    onError={(e) => {
+                        console.error('Logo failed to load:', e.target.src);
+                        e.target.style.display = 'none';
+                    }}
+                    onLoad={() => console.log('Logo loaded successfully')}
                 />
                 </div>
 

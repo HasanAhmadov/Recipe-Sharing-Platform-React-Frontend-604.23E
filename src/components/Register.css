@@ -25,9 +25,12 @@
 
 .logo-image {
     max-width: 320px;
+    width: 100%;
     height: auto;
-    display: block;
+    display: block !important;
     margin: 0 auto;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .form-title {
@@ -191,17 +194,39 @@
     font-size: 12px;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
     .register-container {
-        padding: 10px;
+        padding: 15px;
     }
     
     .register-card {
-        padding: 30px 20px;
+        padding: 30px 25px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
     }
     
     .logo-image {
-        max-width: 150px;
+        max-width: 220px;
+    }
+}
+
+@media (max-width: 480px) {
+    .register-container {
+        padding: 10px;
+        align-items: flex-start;
+        padding-top: 30px;
+    }
+    
+    .register-card {
+        padding: 25px 20px;
+        border-radius: 8px;
+    }
+
+    .logo-section {
+        margin-bottom: 20px;
+    }
+    
+    .logo-image {
+        max-width: 180px;
         height: auto;
         display: block;
         margin: 0 auto;
@@ -209,5 +234,25 @@
     
     .form-title {
         font-size: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .form-group {
+        margin-bottom: 16px;
+    }
+    
+    .form-input {
+        padding: 10px 10px 10px 36px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    .submit-button {
+        padding: 12px;
+        font-size: 15px;
+    }
+    
+    .message {
+        font-size: 13px;
+        padding: 10px;
     }
 }
