@@ -78,8 +78,14 @@ const Login = () => {
                 
                 setMessage(`Xoş gəlmisiniz, ${data.name}! Uğurla daxil oldunuz.`);
                 
-                // Redirect to dashboard immediately
-                navigate('/dashboard');
+                // Check if there's a redirect URL stored (for shared links)
+                const redirectUrl = localStorage.getItem('redirectAfterLogin');
+                if (redirectUrl) {
+                    localStorage.removeItem('redirectAfterLogin');
+                    window.location.href = redirectUrl; // Use full navigation to preserve query params
+                } else {
+                    navigate('/dashboard');
+                }
 
             } else {
                 // Handle different error cases

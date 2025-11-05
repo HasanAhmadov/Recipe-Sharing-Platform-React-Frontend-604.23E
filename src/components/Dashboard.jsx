@@ -29,6 +29,33 @@ const Dashboard = () => {
     }
   }, [user]);
 
+  // Handle shared recipe links with recipeId query parameter
+  useEffect(() => {
+    if (user) {
+      const params = new URLSearchParams(window.location.search);
+      const recipeId = params.get('recipeId');
+      
+      if (recipeId) {
+        // Scroll to the recipe with this ID after posts are loaded
+        setTimeout(() => {
+          const postElement = document.querySelector(`[data-post-id="${recipeId}"]`);
+          if (postElement) {
+            postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Optional: Add a highlight effect
+            postElement.style.transition = 'background-color 0.5s';
+            postElement.style.backgroundColor = 'rgba(255, 215, 0, 0.1)';
+            setTimeout(() => {
+              postElement.style.backgroundColor = '';
+            }, 2000);
+          }
+        }, 500); // Wait for posts to render
+        
+        // Clean up URL without reloading
+        window.history.replaceState({}, '', '/dashboard');
+      }
+    }
+  }, [user, posts]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('view') === 'profile' && user && viewMode !== 'profile') {
@@ -110,15 +137,34 @@ const Dashboard = () => {
     }
   };
 
-  const handleLike = async (postId) => {
+  // Track in-flight like requests to prevent duplicate rapid submissions
+  const [pendingLikes, setPendingLikes] = useState({});
+
+  const handleLike = async (postId, showAnimation = false) => {
     if (!user) {
       setError('Zəhmət olmasa yenidən daxil olun');
       return;
     }
+
+    // Guard: if a like/unlike for this post is already pending, skip
+    if (pendingLikes[postId]) {
+      console.log('Like already pending for post:', postId);
+      return;
+    }
+
+    // Clear any previous errors
+    setError(null);
+    setPendingLikes((prev) => ({ ...prev, [postId]: true }));
+
     try {
+      console.log('Sending like request for post:', postId);
+      
       const response = await fetch(`${API_BASE}/api/Likes/LikeReceiptById/${postId}`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: {
+          'Authorization': `Bearer ${user?.token}`,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ receiptId: postId }),
       });
 
@@ -127,35 +173,36 @@ const Dashboard = () => {
           handleLogout();
           throw new Error('Token etibarsızdır');
         }
-        throw new Error('Like failed');
+        const errorText = await response.text();
+        console.error('API Error Response:', response.status, errorText);
+        throw new Error(`Like failed: ${response.status}`);
       }
 
+      // Parse JSON response - API returns { liked: true/false }
       const data = await response.json();
+      console.log('Like API Response:', data);
+
       const isLiked = data.liked;
 
-      // Trigger heart animation only when liking
-      if (isLiked) {
+      // Show heart animation only when liking (and requested via showAnimation flag)
+      if (isLiked && showAnimation) {
         setAnimatingHeart({ postId, type: 'like' });
-        setTimeout(() => setAnimatingHeart(null), 1000); // Remove animation after 1 second
+        setTimeout(() => setAnimatingHeart(null), 1000);
       }
 
       // Update feed posts
       setPosts((prev) =>
         prev.map((p) => {
           if (p.id === postId) {
-            const currentLikes = p.likesCount || p.count || 0;
             const wasLiked = p.likedByUser || false;
+            const currentLikes = p.likesCount || p.count || 0;
             
-            // Calculate new likes count based on the response
             let newLikesCount;
             if (isLiked && !wasLiked) {
-              // Just liked
               newLikesCount = currentLikes + 1;
             } else if (!isLiked && wasLiked) {
-              // Just unliked
               newLikesCount = Math.max(0, currentLikes - 1);
             } else {
-              // State is already in sync
               newLikesCount = currentLikes;
             }
             
@@ -174,8 +221,8 @@ const Dashboard = () => {
       setUserPosts((prev) =>
         prev.map((p) => {
           if (p.id === postId) {
-            const currentLikes = p.likesCount || p.count || 0;
             const wasLiked = p.likedByUser || false;
+            const currentLikes = p.likesCount || p.count || 0;
             
             let newLikesCount;
             if (isLiked && !wasLiked) {
@@ -190,6 +237,7 @@ const Dashboard = () => {
               ...p,
               likedByUser: isLiked,
               count: newLikesCount,
+              likesCount: newLikesCount,
             };
           }
           return p;
@@ -197,7 +245,14 @@ const Dashboard = () => {
       );
     } catch (err) {
       console.error('Like error:', err);
-      setError('Bəyənmə zamanı xəta baş verdi');
+      setError('Bəyənmə zamanı xəta baş verdi: ' + err.message);
+    } finally {
+      // Clear pending flag regardless of success or failure
+      setPendingLikes((prev) => {
+        const clone = { ...prev };
+        delete clone[postId];
+        return clone;
+      });
     }
   };
 
@@ -278,18 +333,32 @@ const Dashboard = () => {
     }
   };
 
-  // Handle double-tap for mobile devices
+  // Handle double-tap for mobile (double-click for desktop is separate)
   const handleImageTap = (postId) => {
+    if (!isMobile()) return; // Desktop uses native onDoubleClick
+    
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300; // 300ms window for double-tap
 
-    if (lastTap && (now - lastTap) < DOUBLE_TAP_DELAY) {
-      // This is a double-tap
-      handleLike(postId);
+    // lastTap is an object { time, postId }
+    if (lastTap && (now - lastTap.time) < DOUBLE_TAP_DELAY && lastTap.postId === postId) {
+      // This is a double-tap - only like if not already liked
+      const post = posts.find(p => p.id === postId) || userPosts.find(p => p.id === postId);
+      if (post && !post.likedByUser) {
+        handleLike(postId, true); // true = show animation
+      }
       setLastTap(null);
     } else {
       // This is a single tap, wait to see if another tap comes
-      setLastTap(now);
+      setLastTap({ time: now, postId });
+    }
+  };
+
+  // Handle double-click on desktop - only like if not already liked
+  const handleImageDoubleClick = (postId) => {
+    const post = posts.find(p => p.id === postId) || userPosts.find(p => p.id === postId);
+    if (post && !post.likedByUser) {
+      handleLike(postId, true); // true = show animation
     }
   };
 
@@ -424,12 +493,6 @@ const Dashboard = () => {
     // Calculate difference in milliseconds, then convert to seconds
     const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
     
-    // Debugging: log the values
-    console.log('Date string:', dateString);
-    console.log('Parsed date:', date.toISOString());
-    console.log('Current time:', now.toISOString());
-    console.log('Difference in seconds:', diff);
-    
     if (diff < 0 || isNaN(diff)) return 'yeni';
     if (diff < 10) return 'yeni';
     if (diff < 60) return `${diff}s`;
@@ -517,7 +580,7 @@ const Dashboard = () => {
               ) : (
                 <div className="feed">
                   {userPosts.map((post) => (
-                    <div key={post.id} className="post-card">
+                    <div key={post.id} className="post-card" data-post-id={post.id}>
                       <div className="post-header">
                         <div className="user-info">
                           <div className="avatar">
@@ -529,8 +592,8 @@ const Dashboard = () => {
                       </div>
                       <div 
                         className="post-image" 
-                        onDoubleClick={() => handleLike(post.id)}
                         onClick={() => handleImageTap(post.id)}
+                        onDoubleClick={() => handleImageDoubleClick(post.id)}
                       >
                         <img
                           src={
@@ -552,7 +615,7 @@ const Dashboard = () => {
                       <div className="post-actions">
                         <button
                           className={`action-btn ${post.likedByUser ? 'liked' : ''}`}
-                          onClick={() => handleLike(post.id)}
+                          onClick={() => handleLike(post.id, false)}
                           disabled={!user}
                         >
                           <Heart
@@ -607,7 +670,7 @@ const Dashboard = () => {
                 <div className="no-results">Heç bir resept tapılmadı</div>
               ) : (
                 posts.map((post) => (
-                  <div key={post.id} className="post-card">
+                  <div key={post.id} className="post-card" data-post-id={post.id}>
                     <div className="post-header">
                       <div className="user-info">
                         <div
@@ -627,8 +690,8 @@ const Dashboard = () => {
                     </div>
                     <div 
                       className="post-image" 
-                      onDoubleClick={() => handleLike(post.id)}
                       onClick={() => handleImageTap(post.id)}
+                      onDoubleClick={() => handleImageDoubleClick(post.id)}
                     >
                       <img
                         src={
@@ -650,7 +713,7 @@ const Dashboard = () => {
                     <div className="post-actions">
                       <button
                         className={`action-btn ${post.likedByUser ? 'liked' : ''}`}
-                        onClick={() => handleLike(post.id)}
+                        onClick={() => handleLike(post.id, false)}
                         disabled={!user}
                       >
                         <Heart

@@ -7,6 +7,26 @@ import Dashboard from './components/Dashboard';
 import Create from './components/Create';
 import './App.css';
 
+// Component to handle root path and preserve query params
+const RootRedirect = () => {
+  const queryParams = window.location.search;
+  
+  // Check if user is logged in
+  const token = localStorage.getItem('accessToken');
+  
+  if (token) {
+    // User is logged in, go to dashboard with params
+    return <Navigate to={`/dashboard${queryParams}`} replace />;
+  } else {
+    // User not logged in
+    if (queryParams) {
+      // Store the full URL for after login
+      localStorage.setItem('redirectAfterLogin', `/dashboard${queryParams}`);
+    }
+    return <Navigate to="/login" replace />;
+  }
+};
+
 function App() {
   return (
     <AuthProvider>
@@ -17,7 +37,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/create" element={<Create />} />
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<RootRedirect />} />
           </Routes>
         </div>
       </Router>
