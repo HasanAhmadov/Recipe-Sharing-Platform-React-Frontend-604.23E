@@ -12,7 +12,8 @@ const Create = () => {
   const [success, setSuccess] = useState(null);
   const { user, logout } = useAuth();
 
-  const API_BASE = 'https://rsp-api.up.railway.app';
+  // Use environment variable with fallback for deployment flexibility
+  const API_BASE = import.meta.env.VITE_API_BASE || 'https://rsp-api.up.railway.app';
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0];

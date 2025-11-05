@@ -24,7 +24,8 @@ const fetchWithRetry = async (url, options, maxRetries = 3) => {
     throw new Error('Failed to reach server.');
 };
 
-const API_BASE_URL = 'https://rsp-api.up.railway.app';
+// Environment-driven API base for Netlify / other deployments
+const API_BASE_URL = import.meta.env.VITE_API_BASE || 'https://rsp-api.up.railway.app';
 const REGISTER_ENDPOINT = '/api/Auth/Register';
 
 const Register = () => {
