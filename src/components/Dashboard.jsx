@@ -31,7 +31,7 @@ const Dashboard = () => {
 
   // Handle shared recipe links with recipeId query parameter
   useEffect(() => {
-    if (user) {
+    if (user && posts.length > 0) {
       const params = new URLSearchParams(window.location.search);
       const recipeId = params.get('recipeId');
       
@@ -47,11 +47,26 @@ const Dashboard = () => {
             setTimeout(() => {
               postElement.style.backgroundColor = '';
             }, 2000);
+            
+            // Clean up URL without reloading - only after successful scroll
+            window.history.replaceState({}, '', '/dashboard');
+          } else {
+            // If post not found, try again after a bit more time
+            console.log('Recipe not found yet, waiting...');
+            setTimeout(() => {
+              const retryElement = document.querySelector(`[data-post-id="${recipeId}"]`);
+              if (retryElement) {
+                retryElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                retryElement.style.transition = 'background-color 0.5s';
+                retryElement.style.backgroundColor = 'rgba(255, 215, 0, 0.1)';
+                setTimeout(() => {
+                  retryElement.style.backgroundColor = '';
+                }, 2000);
+                window.history.replaceState({}, '', '/dashboard');
+              }
+            }, 1000);
           }
-        }, 500); // Wait for posts to render
-        
-        // Clean up URL without reloading
-        window.history.replaceState({}, '', '/dashboard');
+        }, 300); // Reduced initial timeout since we now wait for posts to load
       }
     }
   }, [user, posts]);
@@ -545,7 +560,7 @@ const Dashboard = () => {
             <span>Yarat</span>
           </button>
           <button
-            className="nav-item"
+            className={`nav-item ${viewMode === 'profile' ? 'active' : ''}`}
             onClick={fetchCurrentUserProfile}
           >
             <User size={24} />
@@ -645,16 +660,18 @@ const Dashboard = () => {
           <>
             <div className="search-bar">
               <form onSubmit={handleSearch}>
-                <Search size={20} className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Axtar"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  disabled={!user}
-                />
-                {searchLoading && <span className="loading-text">Axtarılır...</span>}
+                <div className="search-input-wrapper">
+                  <Search size={20} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Axtar"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    disabled={!user}
+                  />
+                </div>
               </form>
+              {searchLoading && <span className="loading-text">Axtarılır...</span>}
             </div>
             <div className="feed">
               {loading ? (

@@ -107,11 +107,17 @@ body {
   border-radius: 12px;
   padding: 12px 16px;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .search-bar form {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-input-wrapper {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -145,7 +151,8 @@ body {
 .loading-text {
   color: #8e8e8e;
   font-size: 14px;
-  margin-left: auto;
+  text-align: center;
+  padding: 4px 0;
 }
 
 /* Feed */
@@ -629,11 +636,16 @@ body {
     z-index: 100;
     background: white;
     border-bottom: 1px solid #dbdbdb;
+    gap: 6px;
   }
 
   .search-bar input {
     font-size: 14px;
-    padding: 10px 10px 10px 40px;
+  }
+
+  .loading-text {
+    font-size: 12px;
+    padding: 2px 0;
   }
 
   .post-card {
@@ -761,10 +773,16 @@ body {
   .search-bar {
     padding: 8px 10px;
     border-radius: 0;
+    gap: 4px;
   }
 
   .search-bar input {
     font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .loading-text {
+    font-size: 11px;
+    padding: 2px 0;
   }
 
   .post-card {
