@@ -463,7 +463,7 @@
   }
 
   .logout-btn {
-    margin-top: 0;
+    display: none; /* Hide logout from navbar on mobile */
   }
 
   .create-content {

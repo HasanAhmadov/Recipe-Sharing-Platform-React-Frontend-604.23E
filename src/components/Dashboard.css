@@ -479,6 +479,10 @@ body {
   margin-top: 20px;
 }
 
+.profile-logout-btn {
+  display: none; /* Hidden on desktop */
+}
+
 .stat-item {
   font-size: 16px;
   color: #262626;
@@ -619,7 +623,7 @@ body {
   }
 
   .logout-btn {
-    margin-top: 0;
+    display: none; /* Hide logout from navbar on mobile */
   }
 
   .main-content {
@@ -693,6 +697,29 @@ body {
     gap: 20px;
     padding: 20px 15px;
     text-align: center;
+  }
+
+  .profile-logout-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background-color: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+
+  .profile-logout-btn:hover {
+    background-color: #cc0000;
   }
 
   .profile-avatar {
@@ -833,6 +860,12 @@ body {
   .profile-header {
     padding: 15px 10px;
     gap: 15px;
+  }
+
+  .profile-logout-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    max-width: 280px;
   }
 
   .profile-avatar {

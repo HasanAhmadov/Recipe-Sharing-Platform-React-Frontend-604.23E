@@ -563,7 +563,7 @@ const Dashboard = () => {
             <span>Yarat</span>
           </button>
           <button
-            className={`nav-item ${viewMode === 'profile' ? 'active' : ''}`}
+            className={`nav-item ${viewMode === 'profile' && selectedUser?.username === user?.username ? 'active' : ''}`}
             onClick={fetchCurrentUserProfile}
           >
             <User size={24} />
@@ -588,6 +588,12 @@ const Dashboard = () => {
                 <p className="profile-name">{selectedUser?.name}</p>
                 <p className="profile-recipe-count">{userPosts.length} resept</p>
               </div>
+              {selectedUser?.username === user?.username && (
+                <button className="profile-logout-btn" onClick={handleLogout}>
+                  <LogOut size={20} />
+                  <span>Çıxış et</span>
+                </button>
+              )}
             </div>
 
             <div className="profile-posts">

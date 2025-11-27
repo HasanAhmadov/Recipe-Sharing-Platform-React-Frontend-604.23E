@@ -12,8 +12,7 @@ const Create = () => {
   const [success, setSuccess] = useState(null);
   const { user, logout } = useAuth();
 
-  // Use environment variable with fallback for deployment flexibility
-  const API_BASE = import.meta.env.VITE_API_BASE || 'https://rsp-api.up.railway.app';
+  const API_BASE = 'https://rsp-api.up.railway.app';
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
@@ -100,8 +99,11 @@ const Create = () => {
   };
 
   const handleLogout = () => {
-    logout();
-    window.location.href = '/login';
+    const confirmed = window.confirm('Çıxmaq istədiyinizə əminsiniz?');
+    if (confirmed) {
+      logout();
+      window.location.href = '/login';
+    }
   };
 
   const goToDashboard = () => {
