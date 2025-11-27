@@ -192,10 +192,10 @@ const Create = () => {
                   placeholder="Reseptin başlığını daxil edin"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  maxLength={1000}
+                  maxLength={5000}
                   disabled={loading}
                 />
-                <span className="char-count">{title.length}/1000</span>
+                <span className="char-count">{title.length}/5000</span>
               </div>
             </div>
 
