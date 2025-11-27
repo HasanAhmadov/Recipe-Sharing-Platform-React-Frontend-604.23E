@@ -494,8 +494,11 @@ const Dashboard = () => {
   };
 
   const handleLogout = () => {
-    logout();s
-    window.location.href = '/login';
+    const confirmed = window.confirm('Çıxmaq istədiyinizə əminsiniz?');
+    if (confirmed) {
+      logout();
+      window.location.href = '/login';
+    }
   };
 
   const formatDate = (dateString) => {
