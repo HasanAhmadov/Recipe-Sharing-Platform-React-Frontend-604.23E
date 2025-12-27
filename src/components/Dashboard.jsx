@@ -521,9 +521,10 @@ const Dashboard = () => {
     const days = Math.floor(diff / 86400);
     if (days < 7) return `${days}gün`;
     const weeks = Math.floor(days / 7);
-    if (weeks < 4) return `${weeks}həftə`;
+    if (weeks < 5) return `${weeks}həftə`;
     const months = Math.floor(days / 30);
-    if (months < 12) return `${months}ay`;
+    if (months > 0 && months < 12) return `${months}ay`;
+    if (days < 365) return `${weeks}həftə`; // Fallback for edge cases
     const years = Math.floor(days / 365);
     return `${years}il`;
   };
