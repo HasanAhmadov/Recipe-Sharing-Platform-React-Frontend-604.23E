@@ -381,6 +381,9 @@ const Dashboard = () => {
     try {
       setUserLoading(true);
       setViewMode('profile');
+      
+      // Scroll to top when switching to profile view
+      window.scrollTo({ top: 0, behavior: 'smooth' });
 
       const userResponse = await fetch(`${API_BASE}/api/User/GetUserById/${userId}`, {
         method: 'GET',
@@ -490,6 +493,8 @@ const Dashboard = () => {
       setViewMode('feed');
       setSelectedUser(null);
       setUserPosts([]);
+      // Scroll to top when returning to feed
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
